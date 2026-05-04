@@ -18,8 +18,12 @@ const ChatHome = () => {
             // Listen to messages, match backend "SendAsync("ReceiveMessage", userName, message)"
             connection.on("ReceiveMessage", (user, message) => {
 
-                // Add new messages in the list 
-                setUserMessages(prevMessages => [...prevMessages, { user, message }]);
+                // Add new messages in the list, keeps the 10 most recent, automatically deletes the oldest
+                setUserMessages(prevMessages => {
+                    const updated = [...prevMessages, { user, message }];
+
+                    return updated.slice(-10);
+                });
             });
 
             // When connection close
