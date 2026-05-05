@@ -8,28 +8,41 @@ const ChatHome = () => {
     const [usermessages, setUserMessages] = useState([]); // List of all messages
     const [userName, setUserName] = useState(''); // Input from user
     const [chatRoom, setChatRoom] = useState(''); // Input from user
+    const [role, setRole] = useState('');
     const [loading, setLoading] = useState(false); // Show "connecting" when joining
+    const [announcements, setAnnouncements] = useState([]);
 
-    // Listen to the server
+    // Set up SignalR listeners when connection is established
+    // Separate events are used for chat messages and announcements
     useEffect(() => {
 
-        // Runs when connection changes (i.e when you connect)
+        // Runs when connection changes
         if (connection) {
-            // Listen to messages, match backend "SendAsync("ReceiveMessage", userName, message)"
-            connection.on("ReceiveMessage", (user, message) => {
+
+            // Handles incoming chat messages (normal chat + system messages)
+            connection.on("ReceiveMessage", (user, message, isSystem = false) => {
 
                 // Add new messages in the list, keeps the 10 most recent, automatically deletes the oldest
-                setUserMessages(prevMessages => {
-                    const updated = [...prevMessages, { user, message }];
-
+                setUserMessages(prev => {
+                    const updated = [...prev, { user, message, isSystem }];
                     return updated.slice(-10);
                 });
             });
 
-            // When connection close
+            // Handles announcements sent by teachers
+            connection.on("ReceiveAnnouncement", (user, message) => {
+                setAnnouncements(prev => [...prev, { user, message }]);
+            });
+
             connection.onclose(() => {
                 console.log("Connection closed");
             });
+
+            // Cleanup listeners to prevent duplicate messages
+            return () => {
+                connection.off("ReceiveMessage");
+                connection.off("ReceiveAnnouncement");
+            };
         }
     }, [connection]);
 
@@ -46,7 +59,7 @@ const ChatHome = () => {
         await connection.start();
 
         // Calling backend method "public async Task JoinChatRoom(...)"
-        await connection.invoke("JoinChatRoom", userName, chatRoom);
+        await connection.invoke("JoinChatRoom", userName, chatRoom, role);
 
         // Save connection, triggers userEffect
         setConnection(connection);
@@ -55,9 +68,13 @@ const ChatHome = () => {
 
     const sendMessage = async (message) => {
         if (connection) {
-
-            // Calling "SendMessage(...)"
             await connection.invoke("SendMessage", chatRoom, userName, message);
+        }
+    };
+
+    const sendAnnouncement = async (message) => {
+        if (connection && role === "Teacher") {
+            await connection.invoke("SendAnnouncement", chatRoom, message);
         }
     };
 
@@ -70,10 +87,34 @@ const ChatHome = () => {
                     </div>
                 ) : (
                     connection ? (
-                        <>
-                            <ChatRoom usermessages={usermessages} />
-                            <ChatBox sendMessage={sendMessage} />
-                        </>
+                            <div className="flex flex-col gap-4">
+
+                                {/*Announcements*/}
+                                <div className="bg-yellow-100 p-3 rounded">
+                                    <h3 className="font-bold"> Announcements</h3>
+
+                                    {announcements.map((a, i) => (
+                                        <div key={i}>
+                                            <strong>{a.user}:</strong> {a.message}
+                                        </div>
+                                    ))}
+
+                                    {/*Only teachers can send announcement*/}
+                                    {role === "Teacher" && (
+                                        <div className="mt-2">
+                                            <ChatBox sendMessage={sendAnnouncement} />
+                                        </div>
+                                    )}
+                                </div>
+
+                                {/*Chat*/}
+                                <div className="bg-white p-3 rounded">
+                                    <h3 className="font-bold"> Chat</h3>
+                                    <ChatRoom usermessages={usermessages} />
+                                    <ChatBox sendMessage={sendMessage} />
+                                </div>
+
+                            </div>
                     ) : (
                         <div className="flex items-center justify-center min-h-screen bg-gray-900">
                             <div className="w-full max-w-lg p-8 mx-4 bg-white rounded-lg shadow-lg md:mx-auto">
@@ -89,6 +130,13 @@ const ChatHome = () => {
                                     value={chatRoom}
                                     onChange={(e) => setChatRoom(e.target.value)}
                                 />
+
+                                <select value={role} onChange={(e) => setRole(e.target.value)}>
+                                    <option value="">Select role</option>
+                                    <option value="Student">Student</option>
+                                    <option value="Teacher">Teacher</option>
+                                </select>
+
                                 <button onClick={() => joinChatRoom(userName, chatRoom)}>Join Chat Room</button>
                             </div>
                         </div>
