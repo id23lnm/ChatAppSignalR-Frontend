@@ -31,7 +31,12 @@ const ChatHome = () => {
 
             // Handles announcements sent by teachers
             connection.on("ReceiveAnnouncement", (user, message) => {
-                setAnnouncements(prev => [...prev, { user, message }]);
+
+                // Add new announcements in the list, keeps the 10 most recent, automatically deletes the oldest
+                setAnnouncements(prev => {
+                    const updated = [...prev, { user, message }];
+                    return updated.slice(-10);
+                });
             });
 
             connection.onclose(() => {
