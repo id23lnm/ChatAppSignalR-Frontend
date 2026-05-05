@@ -52,6 +52,13 @@ const ChatHome = () => {
     }, [connection]);
 
     const joinChatRoom = async (userName, chatRoom) => {
+
+        // Check that user input is not empty
+        if (!userName.trim() || !chatRoom.trim() || !role) {
+            alert("Please enter username, chat room and select a role");
+            return;
+        }
+
         setLoading(true);
 
         // Creates a SignalR-connection
