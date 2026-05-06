@@ -4,12 +4,12 @@ import ChatRoom from './ChatRoom';
 import ChatBox from './ChatBox';
 
 const ChatHome = () => {
-    const [connection, setConnection] = useState(null); // Save SignalR-connection
-    const [usermessages, setUserMessages] = useState([]); // List of all messages
-    const [userName, setUserName] = useState(''); // Input from user
-    const [chatRoom, setChatRoom] = useState(''); // Input from user
+    const [connection, setConnection] = useState(null); 
+    const [usermessages, setUserMessages] = useState([]); 
+    const [userName, setUserName] = useState(''); 
+    const [chatRoom, setChatRoom] = useState(''); 
     const [role, setRole] = useState('');
-    const [loading, setLoading] = useState(false); // Show "connecting" when joining
+    const [loading, setLoading] = useState(false); 
     const [announcements, setAnnouncements] = useState([]);
 
     // Set up SignalR listeners when connection is established
@@ -70,7 +70,7 @@ const ChatHome = () => {
         // Start a WebSocket-connection
         await connection.start();
 
-        // Calling backend method "public async Task JoinChatRoom(...)"
+        // Calling backend method
         await connection.invoke("JoinChatRoom", userName, chatRoom, role);
 
         // Save connection, triggers userEffect
